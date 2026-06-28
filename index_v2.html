@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <title>iPad Drive Slideshow</title>
+
+
+
+  <style>
+
+    :root {
+
+      --bg: #000;
+
+      --panel: rgba(0, 0, 0, 0.65);
+
+      --text: #fff;
+
+      --muted: #aaa;
+
+      --button: #2563eb;
+
+      --button2: #333;
+
+    }
+
+
+
+    html, body {
+
+      margin: 0;
+
+      padding: 0;
+
+      width: 100%;
+
+      height: 100%;
+
+      background: var(--bg);
+
+      color: var(--text);
+
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+      overflow: hidden;
+
+      touch-action: manipulation;
+
+    }
+
+
+
+    #app {
+
+      width: 100vw;
+
+      height: 100vh;
+
+      position: relative;
+
+      background: #000;
+
+    }
+
+
+
+    #slide {
+
+      width: 100vw;
+
+      height: 100vh;
+
+      object-fit: contain;
+
+      background: #000;
+
+      display: block;
+
+      opacity: 1;
+
+      transition: none;
+
+    }
+
+
+
+    
+
+
+
+    #topPanel {
+
+      position: absolute;
+
+      top: env(safe-area-inset-top, 0);
+
+      left: 0;
+
+      right: 0;
+
+      padding: 12px;
+
+      display: flex;
+
+      flex-wrap: wrap;
+
+      gap: 8px;
+
+      align-items: center;
+
+      background: linear-gradient(to bottom, rgba(0,0,0,0.75), rgba(0,0,0,0));
+
+      z-index: 10;
+
+    }
+
+
+
+    button, select {
+
+      font-size: 14px;
+
+      border: none;
+
+      border-radius: 10px;
+
+      padding: 10px 12px;
+
+      color: #fff;
+
+      background: var(--button2);
+
+    }
+
+
+
+    button.primary {
+
+      background: var(--button);
+
+    }
+
+
+
+    button:disabled {
+
+      opacity: 0.4;
+
+    }
+
+
+
+    #status {
+
+      font-size: 13px;
+
+      color: var(--muted);
+
+      padding: 6px 8px;
+
+      background: var(--panel);
+
+      border-radius: 8px;
+
+      max-width: 90vw;
+
+    }
+
+
+
+    #bottomPanel {
+
+      position: absolute;
+
+      left: 0;
+
+      right: 0;
+
+      bottom: env(safe-area-inset-bottom, 0);
+
+      padding: 12px;
+
+      display: flex;
+
+      gap: 8px;
+
+      align-items: center;
+
+      justify-content: center;
+
+      background: linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0));
+
+      z-index: 10;
+
+    }
+
+
+
+    #info {
+
+      position: absolute;
+
+      right: 12px;
+
+      bottom: calc(70px + env(safe-area-inset-bottom, 0));
+
+      padding: 8px 10px;
+
+      background: var(--panel);
+
+      color: var(--muted);
+
+      border-radius: 10px;
+
+      font-size: 12px;
+
+      max-width: 60vw;
+
+      white-space: nowrap;
+
+      overflow: hidden;
+
+      text-overflow: ellipsis;
+
+      z-index: 10;
+
+    }
+
+
+
+    .hidden {
+
+      display: none !important;
+
+    }
+
+
+
+    #emptyMessage {
+
+      position: absolute;
+
+      inset: 0;
+
+      display: grid;
+
+      place-items: center;
+
+      text-align: center;
+
+      padding: 24px;
+
+      color: #ccc;
+
+      line-height: 1.7;
+
+    }
+
+  
+    .ui-hidden #topPanel,
+    .ui-hidden #bottomPanel,
+    .ui-hidden #info{
+      display:none !important;
+    }
+
+</style>
+
+</head>
+
+
+
+<body>
+
+  <div id="app">
+
+    <img id="slide" alt="slideshow image" />
+
+
+
+    <div id="emptyMessage">
+
+      <div>
+
+        <h1>Drive Slideshow</h1>
+
+        <p>
+
+          まず「Google Driveに接続」を押してください。<br>
+
+          次に「写真を読み込む」を押すとスライドショーが始まります。
+
+        </p>
+
+      </div>
+
+    </div>
+
+
+
+    <div id="topPanel">
+
+      <button id="authorizeButton" class="primary">Google Driveに接続</button>
+
+      <button id="loadButton" disabled>写真を読み込む</button>
+
+      <button id="fullscreenButton">全画面表示</button>
+
+
+
+      <select id="intervalSelect" title="表示間隔">
+
+        <option value="5000">5秒</option>
+
+        <option value="10000" selected>10秒</option>
+
+        <option value="30000">30秒</option>
+
+        <option value="60000">1分</option>
+
+      </select>
+
+
+
+      <select id="fitSelect" title="表示方法">
+
+        <option value="contain" selected>全体表示</option>
+
+        <option value="cover">画面いっぱい</option>
+
+      </select>
+
+
+
+      <div id="status">未接続</div>
+
+    </div>
+
+
+
+    <div id="info" class="hidden"></div>
+
+
+
+    <div id="bottomPanel">
+
+      <button id="prevButton" disabled>前へ</button>
+
+      <button id="pauseButton" disabled>一時停止</button>
+
+      <button id="nextButton" disabled>次へ</button>
+
+      <button id="reshuffleButton" disabled>再シャッフル</button>
+
+    </div>
+
+  </div>
+
+
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+
+
+  <script>
+
+    /************************************************************
+
+     * ここを自分の値に書き換えてください
+
+     ************************************************************/
+
+
+
+    const CLIENT_ID = "513616389762-7qkh3fq0jbinv5mcg8s8e6bdn2d8m200.apps.googleusercontent.com";
+
+    const FOLDER_ID = "13Eq_PBE-DukwyniJi-p-S0Cupttv3KBV";
+
+
+
+    /************************************************************
+
+     * 基本設定
+
+     ************************************************************/
+
+
+
+    const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
+
+    const FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
+
+
+
+    let tokenClient;
+
+    let accessToken = null;
+
+
+
+    let photos = [];
+
+    let currentIndex = 0;
+
+    let timer = null;
+
+    let paused = false;
+
+    let currentObjectUrl = null;
+
+
+
+    const authorizeButton = document.getElementById("authorizeButton");
+
+    const loadButton = document.getElementById("loadButton");
+
+    const fullscreenButton = document.getElementById("fullscreenButton");
+
+    const intervalSelect = document.getElementById("intervalSelect");
+
+    const fitSelect = document.getElementById("fitSelect");
+
+
+
+    const prevButton = document.getElementById("prevButton");
+
+    const pauseButton = document.getElementById("pauseButton");
+
+    const nextButton = document.getElementById("nextButton");
+
+    const reshuffleButton = document.getElementById("reshuffleButton");
+
+
+
+    const statusEl = document.getElementById("status");
+
+    const slideEl = document.getElementById("slide");
+
+    const infoEl = document.getElementById("info");
+
+    const emptyMessage = document.getElementById("emptyMessage");
+    const appEl=document.getElementById("app");
+    let uiTimer;
+
+
+
+    window.onload = () => {
+
+      waitForGoogleIdentity();
+
+    };
+
+
+
+    function waitForGoogleIdentity() {
+
+      if (!window.google || !google.accounts || !google.accounts.oauth2) {
+
+        setTimeout(waitForGoogleIdentity, 100);
+
+        return;
+
+      }
+
+
+
+      tokenClient = google.accounts.oauth2.initTokenClient({
+
+        client_id: CLIENT_ID,
+
+        scope: SCOPES,
+
+        callback: (response) => {
+
+          if (response.error) {
+
+            console.error(response);
+
+            setStatus("ログインに失敗しました: " + response.error);
+
+            return;
+
+          }
+
+
+
+          accessToken = response.access_token;
+
+          setStatus("Google Driveに接続しました");
+
+          loadButton.disabled = false;
+
+        },
+
+      });
+
+
+
+      authorizeButton.disabled = false;
+
+      setStatus("準備完了。Google Driveに接続してください。");
+
+    }
+
+
+
+    authorizeButton.addEventListener("click", () => {
+
+      if (!tokenClient) {
+
+        setStatus("Google認証ライブラリを読み込み中です。少し待ってください。");
+
+        return;
+
+      }
+
+
+
+      tokenClient.requestAccessToken({
+
+        prompt: accessToken ? "" : "consent"
+
+      });
+
+    });
+
+
+
+    loadButton.addEventListener("click", async () => {
+
+      try {
+
+        if (!accessToken) {
+
+          setStatus("先にGoogle Driveに接続してください。");
+
+          return;
+
+        }
+
+
+
+        setStatus("写真を検索中です...");
+
+        photos = await listImagesRecursively(FOLDER_ID);
+
+
+
+        if (photos.length === 0) {
+
+          setStatus("画像が見つかりませんでした。フォルダIDや写真形式を確認してください。");
+
+          return;
+
+        }
+
+
+
+        shuffle(photos);
+
+        currentIndex = 0;
+
+        paused = false;
+
+
+
+        enableSlideshowButtons();
+        showUI();
+
+        emptyMessage.classList.add("hidden");
+
+
+
+        setStatus(`${photos.length}枚の写真を読み込みました`);
+
+        await showCurrentPhoto();
+
+        startTimer();
+
+
+
+      } catch (error) {
+
+        console.error(error);
+
+        setStatus("写真の読み込み中にエラー: " + error.message);
+
+      }
+
+    });
+
+
+
+    fullscreenButton.addEventListener("click", async () => {
+
+      try {
+
+        const app = document.getElementById("app");
+
+        if (!document.fullscreenElement && app.requestFullscreen) {
+
+          await app.requestFullscreen();
+
+        } else if (document.exitFullscreen) {
+
+          await document.exitFullscreen();
+
+        }
+
+      } catch (error) {
+
+        console.warn(error);
+
+        setStatus("全画面表示にできませんでした。iPadでは共有ボタンからホーム画面追加も試してください。");
+
+      }
+
+    });
+
+
+
+    intervalSelect.addEventListener("change", () => {
+
+      if (photos.length > 0 && !paused) {
+
+        startTimer();
+
+      }
+
+    });
+
+
+
+    fitSelect.addEventListener("change", () => {
+
+      slideEl.style.objectFit = fitSelect.value;
+
+    });
+
+
+
+    prevButton.addEventListener("click", async () => {
+
+      if (photos.length === 0) return;
+
+      currentIndex = (currentIndex - 1 + photos.length) % photos.length;
+
+      await showCurrentPhoto();
+
+      restartTimerIfNeeded();
+
+    });
+
+
+
+    nextButton.addEventListener("click", async () => {
+
+      if (photos.length === 0) return;
+
+      await goNext();
+
+      restartTimerIfNeeded();
+
+    });
+
+
+
+    pauseButton.addEventListener("click", () => {
+
+      paused = !paused;
+
+
+
+      if (paused) {
+
+        stopTimer();
+
+        pauseButton.textContent = "再開";
+
+        setStatus("一時停止中");
+
+      } else {
+
+        pauseButton.textContent = "一時停止";
+
+        setStatus("再開しました");
+
+        startTimer();
+
+      }
+
+    });
+
+
+
+    reshuffleButton.addEventListener("click", async () => {
+
+      if (photos.length === 0) return;
+
+      shuffle(photos);
+
+      currentIndex = 0;
+
+      await showCurrentPhoto();
+
+      restartTimerIfNeeded();
+
+      setStatus("再シャッフルしました");
+
+    });
+
+
+
+    async function listImagesRecursively(folderId) {
+
+      let results = [];
+
+      let pageToken = null;
+
+
+
+      do {
+
+        const query =
+
+          `'${folderId}' in parents and trashed = false and (` +
+
+          `mimeType contains 'image/' or mimeType = '${FOLDER_MIME_TYPE}'` +
+
+          `)`;
+
+
+
+        const params = new URLSearchParams({
+
+          q: query,
+
+          fields: "nextPageToken, files(id, name, mimeType, modifiedTime, size)",
+
+          pageSize: "1000",
+
+          orderBy: "name",
+
+        });
+
+
+
+        if (pageToken) {
+
+          params.set("pageToken", pageToken);
+
+        }
+
+
+
+        const res = await fetch(
+
+          `https://www.googleapis.com/drive/v3/files?${params.toString()}`,
+
+          {
+
+            headers: {
+
+              Authorization: `Bearer ${accessToken}`,
+
+            },
+
+          }
+
+        );
+
+
+
+        if (!res.ok) {
+
+          const text = await res.text();
+
+          throw new Error(`Drive API files.list error: ${res.status} ${text}`);
+
+        }
+
+
+
+        const data = await res.json();
+
+        const files = data.files || [];
+
+
+
+        for (const file of files) {
+
+          if (file.mimeType === FOLDER_MIME_TYPE) {
+
+            const childImages = await listImagesRecursively(file.id);
+
+            results.push(...childImages);
+
+          } else if (file.mimeType && file.mimeType.startsWith("image/")) {
+
+            results.push(file);
+
+          }
+
+        }
+
+
+
+        pageToken = data.nextPageToken;
+
+      } while (pageToken);
+
+
+
+      return results;
+
+    }
+
+
+
+    async function showCurrentPhoto() {
+
+      if (photos.length === 0) return;
+
+
+
+      const file = photos[currentIndex];
+
+
+
+      setInfo(`${currentIndex + 1} / ${photos.length}　${file.name}`);
+
+      setStatus(`表示中: ${file.name}`);
+
+
+
+      slideEl.classList.add("fade");
+
+
+
+      await sleep(150);
+
+
+
+      const objectUrl = await fetchImageAsObjectUrl(file.id);
+
+
+
+      if (currentObjectUrl) {
+
+        URL.revokeObjectURL(currentObjectUrl);
+
+      }
+
+
+
+      currentObjectUrl = objectUrl;
+
+      slideEl.src = objectUrl;
+
+      slideEl.style.objectFit = fitSelect.value;
+
+
+
+      slideEl.onload = () => {
+
+        slideEl.classList.remove("fade");
+
+      };
+
+
+
+      preloadNextImage();
+
+    }
+
+
+
+    async function fetchImageAsObjectUrl(fileId) {
+
+      const res = await fetch(
+
+        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+
+        {
+
+          headers: {
+
+            Authorization: `Bearer ${accessToken}`,
+
+          },
+
+        }
+
+      );
+
+
+
+      if (!res.ok) {
+
+        const text = await res.text();
+
+        throw new Error(`画像取得エラー: ${res.status} ${text}`);
+
+      }
+
+
+
+      const blob = await res.blob();
+
+      return URL.createObjectURL(blob);
+
+    }
+
+
+
+    async function preloadNextImage() {
+
+      if (photos.length < 2) return;
+
+
+
+      const nextIndex = (currentIndex + 1) % photos.length;
+
+      const nextFile = photos[nextIndex];
+
+
+
+      try {
+
+        const res = await fetch(
+
+          `https://www.googleapis.com/drive/v3/files/${nextFile.id}?alt=media`,
+
+          {
+
+            headers: {
+
+              Authorization: `Bearer ${accessToken}`,
+
+            },
+
+          }
+
+        );
+
+
+
+        if (res.ok) {
+
+          await res.blob();
+
+        }
+
+      } catch (e) {
+
+        console.warn("先読み失敗", e);
+
+      }
+
+    }
+
+
+
+    async function goNext() {
+
+      currentIndex = (currentIndex + 1) % photos.length;
+
+
+
+      if (currentIndex === 0) {
+
+        shuffle(photos);
+
+      }
+
+
+
+      await showCurrentPhoto();
+
+    }
+
+
+
+    function startTimer() {
+
+      stopTimer();
+
+
+
+      const interval = Number(intervalSelect.value);
+
+
+
+      timer = setInterval(async () => {
+
+        if (!paused) {
+
+          await goNext();
+
+        }
+
+      }, interval);
+
+    }
+
+
+
+    function stopTimer() {
+
+      if (timer) {
+
+        clearInterval(timer);
+
+        timer = null;
+
+      }
+
+    }
+
+
+
+    function restartTimerIfNeeded() {
+
+      if (!paused) {
+
+        startTimer();
+
+      }
+
+    }
+
+
+
+    function enableSlideshowButtons() {
+
+      prevButton.disabled = false;
+
+      pauseButton.disabled = false;
+
+      nextButton.disabled = false;
+
+      reshuffleButton.disabled = false;
+
+    }
+
+
+
+    function shuffle(array) {
+
+      for (let i = array.length - 1; i > 0; i--) {
+
+        const j = Math.floor(Math.random() * (i + 1));
+
+        [array[i], array[j]] = [array[j], array[i]];
+
+      }
+
+    }
+
+
+
+    function setStatus(message) {
+
+      statusEl.textContent = message;
+
+    }
+
+
+
+    function setInfo(message) {
+
+      infoEl.textContent = message;
+
+      infoEl.classList.remove("hidden");
+
+    }
+
+
+
+    function sleep(ms) {
+
+      return new Promise(resolve => setTimeout(resolve, ms));
+
+    }
+
+
+
+    
+    function showUI(){
+      appEl.classList.remove("ui-hidden");
+      clearTimeout(uiTimer);
+      if(photos.length){
+        uiTimer=setTimeout(()=>appEl.classList.add("ui-hidden"),5000);
+      }
+    }
+    appEl.addEventListener("pointerdown",showUI);
+    document.addEventListener("fullscreenchange",()=>{ if(document.fullscreenElement) showUI(); else appEl.classList.remove("ui-hidden");});
+
+    document.addEventListener("keydown", async (event) => {
+
+      if (event.key === "ArrowRight") {
+
+        await goNext();
+
+        restartTimerIfNeeded();
+
+      }
+
+
+
+      if (event.key === "ArrowLeft") {
+
+        currentIndex = (currentIndex - 1 + photos.length) % photos.length;
+
+        await showCurrentPhoto();
+
+        restartTimerIfNeeded();
+
+      }
+
+
+
+      if (event.key === " ") {
+
+        pauseButton.click();
+
+      }
+
+    });
+
+  </script>
+
+</body>
+
+</html>
