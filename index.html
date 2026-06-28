@@ -263,12 +263,7 @@
     }
 
   
-    .ui-hidden #topPanel,
-    .ui-hidden #bottomPanel,
-    .ui-hidden #info{
-      display:none !important;
-    }
-
+.ui-hidden #topPanel,.ui-hidden #bottomPanel,.ui-hidden #info{display:none!important;}
 </style>
 
 </head>
@@ -379,7 +374,7 @@
 
     const CLIENT_ID = "513616389762-7qkh3fq0jbinv5mcg8s8e6bdn2d8m200.apps.googleusercontent.com";
 
-    const FOLDER_ID = "13Eq_PBE-DukwyniJi-p-S0Cupttv3KBV";
+    const FOLDER_ID = "1FmhWshxobr1B_epJSEZAA-AE3-0yMCxU";
 
 
 
@@ -444,8 +439,10 @@
     const infoEl = document.getElementById("info");
 
     const emptyMessage = document.getElementById("emptyMessage");
-    const appEl=document.getElementById("app");
-    let uiTimer;
+const appEl=document.getElementById("app");
+let uiTimer;let wakeLock=null;
+async function requestWakeLock(){try{if("wakeLock" in navigator){wakeLock=await navigator.wakeLock.request("screen");}}catch(e){console.warn(e)}}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&document.fullscreenElement)requestWakeLock();});
 
 
 
@@ -569,8 +566,7 @@
 
 
 
-        enableSlideshowButtons();
-        showUI();
+        enableSlideshowButtons();showUI();
 
         emptyMessage.classList.add("hidden");
 
@@ -604,11 +600,11 @@
 
         if (!document.fullscreenElement && app.requestFullscreen) {
 
-          await app.requestFullscreen();
+          await app.requestFullscreen();requestWakeLock();
 
         } else if (document.exitFullscreen) {
 
-          await document.exitFullscreen();
+          if(wakeLock){try{await wakeLock.release();}catch(e){}}await document.exitFullscreen();
 
         }
 
@@ -1082,26 +1078,12 @@
 
 
 
-    function sleep(ms) {
-
-      return new Promise(resolve => setTimeout(resolve, ms));
-
-    }
-
-
-
     
-    function showUI(){
-      appEl.classList.remove("ui-hidden");
-      clearTimeout(uiTimer);
-      if(photos.length){
-        uiTimer=setTimeout(()=>appEl.classList.add("ui-hidden"),5000);
-      }
-    }
-    appEl.addEventListener("pointerdown",showUI);
-    document.addEventListener("fullscreenchange",()=>{ if(document.fullscreenElement) showUI(); else appEl.classList.remove("ui-hidden");});
 
-    document.addEventListener("keydown", async (event) => {
+    function showUI(){appEl.classList.remove("ui-hidden");clearTimeout(uiTimer);if(photos.length){uiTimer=setTimeout(()=>appEl.classList.add("ui-hidden"),5000);}}
+appEl.addEventListener("pointerdown",showUI);
+document.addEventListener("fullscreenchange",()=>{if(document.fullscreenElement)showUI();else appEl.classList.remove("ui-hidden");});
+document.addEventListener("keydown" , async (event) => {
 
       if (event.key === "ArrowRight") {
 
