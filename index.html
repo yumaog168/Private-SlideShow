@@ -721,19 +721,31 @@
 
 
     
+    let refreshPromise = null;
+
+    async function refreshAccessToken(){
+      if(refreshPromise) return refreshPromise;
+      refreshPromise=new Promise((resolve,reject)=>{
+        const cb=tokenClient.callback;
+        tokenClient.callback=(response)=>{
+          tokenClient.callback=cb;
+          refreshPromise=null;
+          if(response.error){reject(new Error(response.error));return;}
+          accessToken=response.access_token;
+          resolve(accessToken);
+        };
+        tokenClient.requestAccessToken({prompt:""});
+      });
+      return refreshPromise;
+    }
+
     async function authorizedFetch(url, options = {}, retry = true) {
-      options.headers = {...(options.headers||{}), Authorization:`Bearer ${accessToken}`};
-      let res = await fetch(url, options);
-      if (res.status===401 && retry && tokenClient){
-        await new Promise((resolve,reject)=>{
-          tokenClient.callback=(response)=>{
-            if(response.error){reject(new Error(response.error));return;}
-            accessToken=response.access_token; resolve();
-          };
-          tokenClient.requestAccessToken({prompt:""});
-        });
+      options={...options,headers:{...(options.headers||{}),Authorization:`Bearer ${accessToken}`}};
+      let res=await fetch(url,options);
+      if(res.status===401 && retry){
+        await refreshAccessToken();
         options.headers.Authorization=`Bearer ${accessToken}`;
-        res=await fetch(url, options);
+        res=await fetch(url,options);
       }
       return res;
     }
