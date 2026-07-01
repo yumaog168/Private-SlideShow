@@ -720,6 +720,24 @@
 
 
 
+    
+    async function authorizedFetch(url, options = {}, retry = true) {
+      options.headers = {...(options.headers||{}), Authorization:`Bearer ${accessToken}`};
+      let res = await fetch(url, options);
+      if (res.status===401 && retry && tokenClient){
+        await new Promise((resolve,reject)=>{
+          tokenClient.callback=(response)=>{
+            if(response.error){reject(new Error(response.error));return;}
+            accessToken=response.access_token; resolve();
+          };
+          tokenClient.requestAccessToken({prompt:""});
+        });
+        options.headers.Authorization=`Bearer ${accessToken}`;
+        res=await fetch(url, options);
+      }
+      return res;
+    }
+
     async function listImagesRecursively(folderId) {
 
       let results = [];
@@ -762,21 +780,7 @@
 
 
 
-        const res = await fetch(
-
-          `https://www.googleapis.com/drive/v3/files?${params.toString()}`,
-
-          {
-
-            headers: {
-
-              Authorization: `Bearer ${accessToken}`,
-
-            },
-
-          }
-
-        );
+        const res = await authorizedFetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`);
 
 
 
@@ -844,21 +848,7 @@ preloadNextImage();
 
     async function fetchImageAsObjectUrl(fileId) {
 
-      const res = await fetch(
-
-        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-
-        {
-
-          headers: {
-
-            Authorization: `Bearer ${accessToken}`,
-
-          },
-
-        }
-
-      );
+      const res = await authorizedFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
 
 
 
@@ -894,21 +884,7 @@ preloadNextImage();
 
       try {
 
-        const res = await fetch(
-
-          `https://www.googleapis.com/drive/v3/files/${nextFile.id}?alt=media`,
-
-          {
-
-            headers: {
-
-              Authorization: `Bearer ${accessToken}`,
-
-            },
-
-          }
-
-        );
+        const res = await authorizedFetch(`https://www.googleapis.com/drive/v3/files/${nextFile.id}?alt=media`);
 
 
 
