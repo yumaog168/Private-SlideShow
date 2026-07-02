@@ -403,6 +403,9 @@
     let tokenClient;
 
     let accessToken = null;
+    let tokenExpiresAt = 0;
+    let refreshTimer = null;
+    let refreshingToken = null;
 
 
 
@@ -494,6 +497,8 @@
 
 
           accessToken = response.access_token;
+          tokenExpiresAt = Date.now() + ((response.expires_in||3600)-300)*1000;
+          scheduleTokenRefresh();
 
           setStatus("Google Driveに接続しました");
 
@@ -512,6 +517,33 @@
     }
 
 
+
+
+    function scheduleTokenRefresh(){
+      if(refreshTimer) clearTimeout(refreshTimer);
+      const delay=Math.max(1000, tokenExpiresAt-Date.now());
+      refreshTimer=setTimeout(()=>refreshAccessToken(),delay);
+    }
+    function refreshAccessToken(){
+      if(refreshingToken) return refreshingToken;
+      refreshingToken=new Promise((resolve,reject)=>{
+        const old=tokenClient.callback;
+        tokenClient.callback=(r)=>{
+          tokenClient.callback=old;
+          refreshingToken=null;
+          if(r.error){reject(r);return;}
+          accessToken=r.access_token;
+          tokenExpiresAt=Date.now()+((r.expires_in||3600)-300)*1000;
+          scheduleTokenRefresh();
+          resolve();
+        };
+        tokenClient.requestAccessToken({prompt:""});
+      });
+      return refreshingToken;
+    }
+    async function ensureValidToken(){
+      if(Date.now()>=tokenExpiresAt-10000) await refreshAccessToken();
+    }
 
     authorizeButton.addEventListener("click", () => {
 
@@ -720,37 +752,8 @@
 
 
 
-    
-    let refreshPromise = null;
-
-    async function refreshAccessToken(){
-      if(refreshPromise) return refreshPromise;
-      refreshPromise=new Promise((resolve,reject)=>{
-        const cb=tokenClient.callback;
-        tokenClient.callback=(response)=>{
-          tokenClient.callback=cb;
-          refreshPromise=null;
-          if(response.error){reject(new Error(response.error));return;}
-          accessToken=response.access_token;
-          resolve(accessToken);
-        };
-        tokenClient.requestAccessToken({prompt:""});
-      });
-      return refreshPromise;
-    }
-
-    async function authorizedFetch(url, options = {}, retry = true) {
-      options={...options,headers:{...(options.headers||{}),Authorization:`Bearer ${accessToken}`}};
-      let res=await fetch(url,options);
-      if(res.status===401 && retry){
-        await refreshAccessToken();
-        options.headers.Authorization=`Bearer ${accessToken}`;
-        res=await fetch(url,options);
-      }
-      return res;
-    }
-
     async function listImagesRecursively(folderId) {
+      await ensureValidToken();
 
       let results = [];
 
@@ -792,7 +795,21 @@
 
 
 
-        const res = await authorizedFetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`);
+        const res = await fetch(
+
+          `https://www.googleapis.com/drive/v3/files?${params.toString()}`,
+
+          {
+
+            headers: {
+
+              Authorization: `Bearer ${accessToken}`,
+
+            },
+
+          }
+
+        );
 
 
 
@@ -859,8 +876,23 @@ preloadNextImage();
 
 
     async function fetchImageAsObjectUrl(fileId) {
+      await ensureValidToken();
 
-      const res = await authorizedFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+      const res = await fetch(
+
+        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+
+        {
+
+          headers: {
+
+            Authorization: `Bearer ${accessToken}`,
+
+          },
+
+        }
+
+      );
 
 
 
@@ -883,6 +915,7 @@ preloadNextImage();
 
 
     async function preloadNextImage() {
+      await ensureValidToken();
 
       if (photos.length < 2) return;
 
@@ -896,7 +929,21 @@ preloadNextImage();
 
       try {
 
-        const res = await authorizedFetch(`https://www.googleapis.com/drive/v3/files/${nextFile.id}?alt=media`);
+        const res = await fetch(
+
+          `https://www.googleapis.com/drive/v3/files/${nextFile.id}?alt=media`,
+
+          {
+
+            headers: {
+
+              Authorization: `Bearer ${accessToken}`,
+
+            },
+
+          }
+
+        );
 
 
 
